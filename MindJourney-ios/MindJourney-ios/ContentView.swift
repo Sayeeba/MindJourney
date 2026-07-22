@@ -65,10 +65,16 @@ struct LoginView: View {
                         HomeView()
                     }
                     
-                    HStack {
-                        Text("Don't have an account?")
-                        NavigationLink("Register", destination: RegisterView())
-                    }
+            HStack {
+                Text("Don't have an account?")
+                    .foregroundColor(Color("MutedText"))
+                
+                NavigationLink(destination: RegisterView()) {
+                    Text("Register")
+                        .fontWeight(.bold)
+                        .foregroundColor(Color("DeepPurple"))
+                }
+            }
                     .padding(.top, 20)
                 }
                 .padding()

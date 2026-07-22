@@ -3,7 +3,7 @@ import mysql.connector
 
 app = Flask(__name__)
 
-# Connect to your XAMPP MySQL Database
+# Connect XAMPP MySQL Database
 def get_db_connection():
     connection = mysql.connector.connect(
         host='localhost',
@@ -35,5 +35,5 @@ def get_journals():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    # Running on port 5000 with debug mode ON
+    # Running on port 5001 with debug mode ON
     app.run(debug=True, host='0.0.0.0', port=5001)
