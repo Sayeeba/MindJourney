@@ -12,21 +12,26 @@ struct RegisterView: View {
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 150, height: 150)
-                .padding(.top, 50)
-            VStack(spacing: 20) {
-                //  Using newline character
-                Text("Take a deep breath.\nYour safe space is just a step away 🌿")
-                    .font(.subheadline)
-                    .multilineTextAlignment(.center) // 👈 This aligns line 1 and line 2 directly in the center
-                    .foregroundColor(Color("LavenderBG"))
-                    .padding(.top, 10)
-                    .padding(.bottom, 10)
-            }
+                .padding(.top, 95)
+               // .border(Color.red, width: 1)    // 👈 TEMPORARY: Draws a red outline to show its exact layout space
+            Image("MindJourney")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 250)
+                .padding(.top, -70)
+            
+            Text("Take a deep breath.\nYour safe space is just a step away 🌿")
+                .font(.subheadline)
+                .multilineTextAlignment(.center)
+                .foregroundColor(Color("LavenderBG"))
+                .padding(.top, -80)
+                .padding(.bottom, 10)
         }
         VStack(spacing: 20) {
             Text("Create Account").foregroundColor(Color("DeepPurple"))
                 .font(.largeTitle)
                 .fontWeight(.bold)
+                .padding(.top, -50)
             
             TextField("Full Name", text: $name).foregroundColor(Color("MutedText"))
                 .textFieldStyle(RoundedBorderTextFieldStyle())

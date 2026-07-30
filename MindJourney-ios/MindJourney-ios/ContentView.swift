@@ -84,7 +84,7 @@ struct LoginView: View {
     
 
     
-    #Preview {
-        ContentView()
-    }
+#Preview {
+    ContentView()
+}
 
