@@ -1,13 +1,31 @@
 import SwiftUI
 
 struct HomeView: View {
-    // State for our cute bouncing emoji animation
+    // MARK: - State Variables
+    @State private var userId: String = "user_123" // Replace with logged-in user ID
     @State private var selectedMood: Int = 0
+    
+    // Animation States
     @State private var happyBlink = false
     @State private var calmSparkle = false
     @State private var neutralLook = false
     @State private var sadTearFall = false
     @State private var anxiousSweat = false
+
+    // Insight State
+    @State private var insightTitle: String = "✨ Pattern Detected"
+    @State private var insightMessage: String = "Loading your personalized insights..."
+    @State private var insightButtonTitle: String = "Try a Meditation"
+    @State private var insightTargetSheet: ActiveSheet = .meditation
+
+    // Navigation Sheet State
+    @State private var activeSheet: ActiveSheet? = nil
+
+    enum ActiveSheet: Identifiable {
+            case profile, dashboard, journal, chatBot, groupTrip, community, psychiatrist, helpline, safeHaven, meditation
+            var id: Int { hashValue }
+        }
+
     var body: some View {
         ZStack {
             // 1. App Background
@@ -26,7 +44,7 @@ struct HomeView: View {
                             .cornerRadius(12)
                             .shadow(color: Color("DeepPurple").opacity(0.15), radius: 4, x: 0, y: 2)
                         
-                        Image("MindJourney") // Your saved text image
+                        Image("MindJourney")
                             .resizable()
                             .scaledToFit()
                             .frame(width: 100, height: 100)
@@ -34,12 +52,14 @@ struct HomeView: View {
                         
                         Spacer()
                         
-                        // Cute little profile button placeholder
-                        Circle()
-                            .fill(Color("LavenderBG"))
-                            .frame(width: 40, height: 40)
-                            .overlay(Text("👤").font(.title3))
-                            .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+                        // Profile Button
+                        Button(action: { activeSheet = .profile }) {
+                            Circle()
+                                .fill(Color("LavenderBG"))
+                                .frame(width: 40, height: 40)
+                                .overlay(Text("👤").font(.title3))
+                                .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+                        }
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 10)
@@ -58,26 +78,23 @@ struct HomeView: View {
                             moodButton(emoji: "😰", label: "Anxious", index: 4)
                         }
                         .onAppear {
-                            //happyBlink = true
                             calmSparkle = true
                             neutralLook = true
                             sadTearFall = true
                             anxiousSweat = true
                         }
                         .task {
-                            // Smooth 0.15s eye blink every 2.5 seconds
                             while !Task.isCancelled {
-                                try? await Task.sleep(nanoseconds: 2_500_000_000) // Wait 2.5s
+                                try? await Task.sleep(nanoseconds: 2_500_000_000)
                                 happyBlink = true
-                                try? await Task.sleep(nanoseconds: 150_000_000)   // Blink for 0.15s
+                                try? await Task.sleep(nanoseconds: 150_000_000)
                                 happyBlink = false
                             }
                         }
+                    }
                     .padding(.vertical, 10)
                     
-                }
-                     
-                    // 4. Emotional Pattern Detection Insight (Journal Suggestion)
+                    // 4. Emotional Pattern Detection Insight Card
                     insightCard()
                     
                     // 5. Feature Grid section
@@ -89,11 +106,14 @@ struct HomeView: View {
                             .padding(.horizontal, 24)
                         
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                            featureCard(icon: "🏕️", title: "Group Trip", subtitle: "Connect in nature")
-                            featureCard(icon: "🤝", title: "Community", subtitle: "Share & support")
-                            featureCard(icon: "🩺", title: "Psychiatrist", subtitle: "Find help near you")
-                            featureCard(icon: "📞", title: "Helpline", subtitle: "24/7 support")
-                            featureCard(icon: "🏨", title: "Safe Haven", subtitle: "Find a quiet hotel/resort")
+                            featureCard(icon: "✍️", title: "Journal", subtitle: "Write down your thoughts", target: .journal)
+                            featureCard(icon: "💬", title: "ChatBot", subtitle: "Hello. You are not alone. How can I help you through this moment?", target: .chatBot)
+                            featureCard(icon: "📈", title: "Dashboard", subtitle: "See your data", target: .journal)
+                            featureCard(icon: "🏕️", title: "Group Trip", subtitle: "Connect in nature", target: .groupTrip)
+                            featureCard(icon: "🤝", title: "Community", subtitle: "Share & support", target: .community)
+                            featureCard(icon: "🩺", title: "Psychiatrist", subtitle: "Find help near you", target: .psychiatrist)
+                            featureCard(icon: "📞", title: "Helpline", subtitle: "24/7 support", target: .helpline)
+                            featureCard(icon: "🏨", title: "Safe Haven", subtitle: "Find a quiet hotel/resort", target: .safeHaven)
                         }
                         .padding(.horizontal, 20)
                     }
@@ -101,6 +121,12 @@ struct HomeView: View {
                     Spacer(minLength: 40)
                 }
             }
+        }
+        .sheet(item: $activeSheet) { sheet in
+            destinationView(for: sheet)
+        }
+        .task {
+            await fetchUserInsight()
         }
     }
     
@@ -111,22 +137,22 @@ struct HomeView: View {
     private func insightCard() -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("✨ Pattern Detected")
+                Text(insightTitle)
                     .font(.subheadline)
                     .fontWeight(.bold)
                     .foregroundColor(Color("DeepPurple"))
                 Spacer()
             }
             
-            Text("Based on your recent journal entries, you've been feeling a bit overwhelmed in the evenings. Would you like to try a 5-minute guided meditation before bed?")
+            Text(insightMessage)
                 .font(.footnote)
                 .foregroundColor(Color("MutedText"))
                 .lineSpacing(4)
             
             Button(action: {
-                // Action to open suggestion
+                activeSheet = insightTargetSheet
             }) {
-                Text("Try a Meditation")
+                Text(insightButtonTitle)
                     .font(.caption)
                     .fontWeight(.bold)
                     .padding(.vertical, 8)
@@ -145,52 +171,155 @@ struct HomeView: View {
     
     // 🗂️ Reusable Feature Card Builder
     @ViewBuilder
-    private func featureCard(icon: String, title: String, subtitle: String) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(icon)
-                .font(.system(size: 32))
-                .padding(12)
-                .background(Color("LavenderBG").opacity(0.5))
-                .clipShape(Circle())
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.bold)
-                    .foregroundColor(Color("DeepPurple"))
+    private func featureCard(icon: String, title: String, subtitle: String, target: ActiveSheet) -> some View {
+        Button(action: { activeSheet = target }) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(icon)
+                    .font(.system(size: 32))
+                    .padding(12)
+                    .background(Color("LavenderBG").opacity(0.5))
+                    .clipShape(Circle())
                 
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundColor(Color("MutedText"))
-                    .lineLimit(2)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                        .foregroundColor(Color("DeepPurple"))
+                    
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(Color("MutedText"))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .background(Color.white)
+            .cornerRadius(16)
+            .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 3)
+        }
+    }
+
+    // MARK: - Navigation Router (Connect your custom Views here)
+    @ViewBuilder
+    private func destinationView(for sheet: ActiveSheet) -> some View {
+        NavigationStack {
+            VStack {
+                switch sheet {
+                case .profile:
+                    Text("User Profile Screen").font(.title2)
+                case .journal:
+                    JournalView()
+                    Text("Journal View").font(.title2) // Replace with JournalView()
+                case .chatBot:
+                    ChatBotView()
+                    Text("AI ChatBot Assistant").font(.title2)
+                case .dashboard:
+                    DashboardView()
+                case .groupTrip:
+                    Text("Group Trips Layout").font(.title2)
+                case .community:
+                    Text("Community Forum").font(.title2)
+                case .psychiatrist:
+                    Text("Find Psychiatrists").font(.title2)
+                case .helpline:
+                    Text("Helpline Directory").font(.title2)
+                case .safeHaven:
+                    Text("Safe Haven Retreats").font(.title2)
+                case .meditation:
+                    Text("Guided Meditation Session").font(.title2)
+                
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color("LavenderBG").opacity(0.2))
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { activeSheet = nil }
+                }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color.white)
-        .cornerRadius(16)
-        .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 3)
+    }
+
+    // MARK: - Backend Integration Methods
+    
+    // 1. Save Mood Log to Backend Database
+    private func logMoodToBackend(mood: String) {
+        guard let url = URL(string: "http://127.0.0.1:8000/api/mood/log") else { return }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = [
+            "user_id": userId,
+            "mood": mood,
+            "timestamp": ISO8601DateFormatter().string(from: Date())
+        ]
+        
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        
+        URLSession.shared.dataTask(with: request) { _, _, _ in
+            // Log saved successfully in database
+        }.resume()
+    }
+    
+    // 2. Fetch User Insight Prompt
+    private func fetchUserInsight() async {
+        guard let url = URL(string: "http://127.0.0.1:8000/api/home/insight/\(userId)") else { return }
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            if let decoded = try? JSONDecoder().decode(BackendInsightResponse.self, from: data) {
+                DispatchQueue.main.async {
+                    self.insightTitle = decoded.title
+                    self.insightMessage = decoded.message
+                    self.insightButtonTitle = decoded.button_title
+                    switch decoded.action_type {
+                    case "journal": self.insightTargetSheet = .journal
+                    case "meditation": self.insightTargetSheet = .meditation
+                    case "community": self.insightTargetSheet = .community
+                    default: self.insightTargetSheet = .journal
+                    }
+                }
+            }
+        } catch {
+            // Default fallback if server is offline
+            DispatchQueue.main.async {
+                self.insightTitle = "✨ Pattern Detected"
+                self.insightMessage = "Based on your recent journal entries, you've been feeling a bit overwhelmed in the evenings. Would you like to try a 5-minute guided meditation before bed?"
+                self.insightButtonTitle = "Try a Meditation"
+                self.insightTargetSheet = .meditation
+            }
+        }
     }
 }
 
+struct BackendInsightResponse: Decodable {
+    let title: String
+    let message: String
+    let button_title: String
+    let action_type: String
+}
 
+// MARK: - Mood Button Extension
 extension HomeView {
     @ViewBuilder
     private func moodButton(emoji: String, label: String, index: Int) -> some View {
         Button(action: {
             selectedMood = index
+            logMoodToBackend(mood: label) // Saves mood selection to database
         }) {
             VStack(spacing: 6) {
-                
-                // 1. EXPRESSIVE ANIMATED EMOJI CONTAINER
                 ZStack {
                     switch index {
-                    case 0: // 😃 HAPPY: Eyes open normally, switches to closed smile 😄 during blink
+                    case 0:
                         Text(happyBlink ? "😄" : "😃")
                             .font(.system(size: 40))
-                            .id("happyEmoji") // Prevents unexpected view rebuild glitches
+                            .id("happyEmoji")
 
-                    case 1: // 😌 CALM: Floating sparkle overhead
+                    case 1:
                         ZStack {
                             Text("😌")
                                 .font(.system(size: 40))
@@ -206,7 +335,7 @@ extension HomeView {
                                 )
                         }
 
-                    case 2: // 😐 OKAY: Eye glance shift side-to-side
+                    case 2:
                         Text("😐")
                             .font(.system(size: 40))
                             .offset(x: neutralLook ? 1.5 : -1.5)
@@ -216,30 +345,29 @@ extension HomeView {
                                 value: neutralLook
                             )
 
-                    case 3: // 😔 SAD: Tear falling down from eye
+                    case 3:
                         ZStack {
                             Text("😔")
                                 .font(.system(size: 40))
 
                             Text("💧")
-                            .font(.system(size: 12))
-                            // Aligned to right eye level (x: 7, y starts at 8)
-                            .offset(x: 7, y: sadTearFall ? 16 : 12)
-                            .opacity(sadTearFall ? 0.0 : 1.0)
-                            .animation(.easeIn(duration: 1.2)
-                            .repeatForever(autoreverses: false),
-                            value: sadTearFall
-                                                            )
-                                                    }
+                                .font(.system(size: 12))
+                                .offset(x: 7, y: sadTearFall ? 16 : 12)
+                                .opacity(sadTearFall ? 0.0 : 1.0)
+                                .animation(
+                                    .easeIn(duration: 1.2)
+                                    .repeatForever(autoreverses: false),
+                                    value: sadTearFall
+                                )
+                        }
 
-                    case 4: // 😩 ANXIOUS: Nervous sweat drop sliding
+                    case 4:
                         ZStack {
                             Text("😩")
                                 .font(.system(size: 40))
 
                             Text("💦")
                                 .font(.system(size: 10))
-                            // Aligned to right temple/forehead level (x: 9, y starts at -5)
                                 .offset(x: anxiousSweat ? 12 : 15, y: anxiousSweat ? 15 : -5)
                                 .opacity(anxiousSweat ? 0.1 : 1.0)
                                 .animation(
@@ -256,7 +384,6 @@ extension HomeView {
                 }
                 .frame(width: 38, height: 38)
 
-                // 2. STATIC TEXT LABEL (Never moves)
                 Text(label)
                     .font(.caption2)
                     .fontWeight(selectedMood == index ? .bold : .regular)
@@ -272,6 +399,7 @@ extension HomeView {
         }
     }
 }
+
 #Preview {
-   HomeView()
+    HomeView()
 }
