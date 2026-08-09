@@ -1,30 +1,37 @@
+from dotenv import load_dotenv
+
+load_dotenv()
+from typing import Optional
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from datetime import datetime
 import uvicorn
+import pymysql
 
-import register # Your external router
+# 1. Your external routers
+import register 
 import chatbot
 import dashboard
+from login import router as login_router
 
+# 2. Single FastAPI Instance (Declare this ONLY ONCE)
 app = FastAPI(title="Mind Journey API")
 
-# Include Routers
+# 3. Include ALL Routers
 app.include_router(register.router)
 app.include_router(chatbot.router)
 app.include_router(dashboard.router)
+app.include_router(login_router)
 
-# 1. Database Configuration
-# Using mysql+mysqlconnector ensures SQLAlchemy uses your existing driver
+# 4. Database Configuration
 DATABASE_URL = "mysql+mysqlconnector://root:@localhost/MindJourney"
-
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# 2. SQLAlchemy Model (Database Table Structure)
+# 5. SQLAlchemy Model
 class JournalEntry(Base):
     __tablename__ = "journal_entries"
     
@@ -33,21 +40,17 @@ class JournalEntry(Base):
     content = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-# 3. Pydantic Schema (For API Response Validation)
+# 6. Pydantic Schema
 class JournalResponse(BaseModel):
     id: int
-    title: str | None = None
-    content: str | None = None
-    created_at: datetime | None = None
+    title: Optional[str] = None
+    content: Optional[str] = None
+    created_at: Optional[datetime] = None
     
     class Config:
-        from_attributes = True # Tells Pydantic to read data from the SQLAlchemy ORM model
+        from_attributes = True
 
-# 4. FastAPI Setup
-app = FastAPI(title="Mind Journey API")
-app.include_router(register.router)
-
-# 5. Database Dependency Injection
+# 7. Database Dependency Injection
 def get_db():
     db = SessionLocal()
     try:
@@ -55,7 +58,7 @@ def get_db():
     finally:
         db.close()
 
-# 6. Routes
+# 8. Routes
 @app.get("/")
 def home():
     return {"message": "MindJourney Python Backend is running!"}
@@ -63,11 +66,11 @@ def home():
 @app.get("/api/journals", response_model=list[JournalResponse])
 def get_journals(db: Session = Depends(get_db)):
     try:
-        # Use SQLAlchemy to query all entries instead of raw SQL strings
         entries = db.query(JournalEntry).all()
         return entries
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# 9. Run Server (Host 0.0.0.0 for Wi-Fi, Port 8000 to match Swift!)
 if __name__ == '__main__':
-    uvicorn.run("main:app", host='0.0.0.0', port=5001, reload=True)
+    uvicorn.run("main:app", host='0.0.0.0', port=8000, reload=True)

@@ -208,25 +208,23 @@ struct HomeView: View {
             VStack {
                 switch sheet {
                 case .profile:
-                    Text("User Profile Screen").font(.title2)
+                    Text("User Profile").font(.title2)
                 case .journal:
                     JournalView()
-                    Text("Journal View").font(.title2) // Replace with JournalView()
                 case .chatBot:
                     ChatBotView()
-                    Text("AI ChatBot Assistant").font(.title2)
                 case .dashboard:
                     DashboardView()
                 case .groupTrip:
-                    Text("Group Trips Layout").font(.title2)
+                    Text("Guided Meditation Session").font(.title2)
                 case .community:
-                    Text("Community Forum").font(.title2)
+                    Text("Community").font(.title2)
                 case .psychiatrist:
-                    Text("Find Psychiatrists").font(.title2)
+                    Text("Psychiatrist").font(.title2)
                 case .helpline:
-                    Text("Helpline Directory").font(.title2)
+                    Text("Helpline").font(.title2)
                 case .safeHaven:
-                    Text("Safe Haven Retreats").font(.title2)
+                    Text("Hotels").font(.title2)
                 case .meditation:
                     Text("Guided Meditation Session").font(.title2)
                 

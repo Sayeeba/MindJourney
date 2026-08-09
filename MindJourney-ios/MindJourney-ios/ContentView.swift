@@ -1,5 +1,7 @@
 import SwiftUI
-
+var isPreview: Bool {
+    ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+}
 struct ContentView: View {
     var body: some View {
         LoginView()
@@ -13,6 +15,7 @@ struct LoginView: View {
     @State private var errorMessage = ""
     @State private var showAlert = false
     @State private var isLoading = false
+    @State private var isPasswordVisible: Bool = false
     
     var body: some View {
         NavigationStack {
@@ -45,18 +48,32 @@ struct LoginView: View {
                                 .stroke(Color("DeepPurple"), lineWidth: 2)
                         )
                         .autocapitalization(.none)
-                    SecureField("", text: $password, prompt: Text("Password").foregroundColor(Color("MutedText").opacity(0.5)))
-                        .padding(10)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color("DeepPurple"), lineWidth: 2)
-                        )
-                    
-                  
-                    
-                     
-                    
-                    Button(action: {
+                    HStack {
+                        if isPasswordVisible {
+                            // NEW: Shows password when eye is tapped
+                            TextField("", text: $password, prompt: Text("Password").foregroundColor(Color("MutedText").opacity(0.5)))
+                                .autocapitalization(.none)
+                        } else {                                                SecureField("", text: $password, prompt: Text("Password").foregroundColor(Color("MutedText").opacity(0.5)))
+                        }
+                        
+                        
+                        // NEW: The eye icon button
+                        Button(action: {
+                            isPasswordVisible.toggle()
+                        }) {
+                            Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
+                                .foregroundColor(Color("MutedText").opacity(0.8))
+                        }
+                        
+                    }
+                    .padding(10) // <-- Paste the styling HERE
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 6)
+                                                .stroke(Color("DeepPurple"),
+                                                        lineWidth: 2)
+                                        )
+                        Button(action: {
+                            
                         loginUser()
                     }) {
                         Text("Login")
@@ -99,7 +116,9 @@ struct LoginView: View {
         
         isLoading = true
         
-        guard let url = URL(string: "http://127.0.0.1:5001/api/login") else { return }
+        guard let url = URL(string: "http://192.168.0.111:8000/api/login") else {
+            print("Invalid URL")
+            return}
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
