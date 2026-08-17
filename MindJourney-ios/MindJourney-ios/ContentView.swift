@@ -116,7 +116,7 @@ struct LoginView: View {
         
         isLoading = true
         
-        guard let url = URL(string: "http://192.168.0.111:8000/api/login") else {
+        guard let url = URL(string: "http://127.0.0.1:8000/api/login") else {
             print("Invalid URL")
             return}
         var request = URLRequest(url: url)
@@ -129,7 +129,15 @@ struct LoginView: View {
         URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 isLoading = false
-                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200, let data = data {
+                    // 1. Extract the user_id from the backend response
+                    if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let fetchedUserId = json["user_id"] as? Int {
+                        
+                        // 2. Save it dynamically to storage
+                        UserDefaults.standard.set(fetchedUserId, forKey: "userId")
+                    }
+                    
                     isLoggedIn = true
                 } else {
                     errorMessage = "Invalid email or password."

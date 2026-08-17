@@ -25,7 +25,7 @@ struct APIHistoryMessage: Encodable {
 }
 
 struct APIChatRequest: Encodable {
-    let user_id: String
+    let user_id: Int
     let message: String
     let history: [APIHistoryMessage]
 }
@@ -37,13 +37,13 @@ struct ChatResponseModel: Decodable {
 struct ChatBotView: View {
     @State private var messages: [ChatMessageItem] = [
         ChatMessageItem(
-            text: "Hello. I'm MindJourney AI. You are not alone—how are you feeling in this moment?",
+            text: "Hello. I'm MindJourney AI. How are you feeling in this moment?",
             isUser: false
         )
     ]
     @State private var inputText: String = ""
     @State private var isSending: Bool = false
-    @State private var userId: String = "user_123"
+    @AppStorage("userId") private var userId: Int = 0
     @FocusState private var isTextFieldFocused: Bool
 
     var body: some View {
@@ -196,7 +196,7 @@ struct ChatBotView: View {
         )
 
         // FIX #2: Update this string to your Mac's LAN IP address when running on physical iPhone
-        guard let url = URL(string: "http://192.168.0.111:8000/api/chat") else { return }
+        guard let url = URL(string: "http://127.0.0.1:8000/api/chat") else { return }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

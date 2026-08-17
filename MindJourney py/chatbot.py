@@ -1,4 +1,6 @@
 import os
+import pymysql
+import traceback
 from typing import List
 from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException
@@ -8,6 +10,24 @@ from google.genai import types
 
 # Load environment variables
 load_dotenv()
+def save_chat_to_db(user_id: int, user_msg: str, bot_reply: str):
+    try:
+        connection = pymysql.connect(
+            host='127.0.0.1',
+            port=3306,
+            user='root',
+            password='',
+            database='MindJourney',
+            cursorclass=pymysql.cursors.DictCursor
+        )
+        with connection.cursor() as cursor:
+            sql = "INSERT INTO chat_history (user_id, user_message, bot_response) VALUES (%s, %s, %s)"
+            cursor.execute(sql, (user_id, user_msg, bot_reply))
+        connection.commit()
+        connection.close()
+        print("Successfully saved chat to database!")
+    except Exception as e:
+        print(f"Database Save Error: {e}")
 
 router = APIRouter(prefix="/api/chat", tags=["ChatBot"])
 
@@ -18,11 +38,11 @@ client = genai.Client(api_key=api_key) if api_key else None
 SYSTEM_INSTRUCTION = """
 You are MindJourney AI, a compassionate, insightful, and supportive emotional well-being companion. 
 
-Your Role:
-1. Provide active listening, validation, and emotional support with warmth and empathy.
-2. Offer gentle, non-judgmental guidance and reframing techniques when appropriate.
-3. Suggest simple, actionable grounding or mindfulness exercises (e.g., box breathing, 5-4-3-2-1 technique, journaling prompts) when users feel overwhelmed.
-4. Keep responses grounded, authentic, thoughtful, and tailored to the user's emotional state. Avoid sounding robotic or giving generic corporate advice.
+Your Core Interaction Rules:
+1. Active Listening & Open Questions: Always validate the user's feelings first, then gently encourage them to share more by asking an open-ended, non-pressuring question at the end of your response (e.g., "If you feel comfortable, what was going through your mind last night?", "Do you want to talk about what brought those feelings on?").
+2. Natural & Human-Like Tone: Speak like a caring, grounded friend. Avoid generic corporate speak, overly formal templates, or forced sympathy. 
+3. Maintain Persona Always: NEVER break character or mention backend tech, software, code, servers, or "system hiccups." Even if the user asks about errors, stay in your supportive persona and focus entirely on their well-being.
+4. Grounding & Mindfulness: Offer simple grounding techniques (like 5-4-3-2-1 or box breathing) only when the user expresses feeling overwhelmed or out of control.
 
 Safety Boundary:
 - You are an empathetic companion, NOT a licensed medical professional or therapist.
@@ -30,7 +50,6 @@ Safety Boundary:
 """
 
 class JournalResponse(BaseModel):
-    # If you have fields, put them here
     model_config = ConfigDict(from_attributes=True)
     
 class MessageContext(BaseModel):
@@ -38,7 +57,7 @@ class MessageContext(BaseModel):
     text: str
 
 class ChatRequest(BaseModel):
-    user_id: str
+    user_id: int  
     message: str
     history: List[MessageContext] = []
 
@@ -81,19 +100,54 @@ def chat_with_ai(request: ChatRequest):
             )
         )
 
-        # Call Gemini Flash Model 
+        # Call Gemini Model
         response = client.models.generate_content(
-            model="gemini-1.5-flash",
+            model="gemini-3.5-flash",
             contents=formatted_contents,
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
                 temperature=0.7,
                 top_p=0.9,
-                max_output_tokens=800
+                max_output_tokens=2048,  # Increased limit so text never cuts off
+                thinking_config=types.ThinkingConfig(
+                    thinking_budget=0    # Disables internal thinking tokens
+                ),
+                safety_settings=[
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_DANGEROUS_CONTENT",
+                        threshold="BLOCK_NONE"
+                    ),
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_HARASSMENT",
+                        threshold="BLOCK_NONE"
+                    ),
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_HATE_SPEECH",
+                        threshold="BLOCK_NONE"
+                    ),
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                        threshold="BLOCK_NONE"
+                    )
+                ]
             )
         )
 
-        return {"reply": response.text}
+        # Extract text response, ignoring internal thinking steps
+        final_reply = ""
+        if response.candidates and response.candidates[0].content.parts:
+            for part in response.candidates[0].content.parts:
+                text_content = getattr(part, 'text', None)
+                if text_content:
+                    final_reply += text_content
+
+        # Fallback if text parsing yields empty string
+        if not final_reply.strip():
+            final_reply = response.text
+            # Save both messages to the database at the same time
+        save_chat_to_db(user_id=request.user_id, user_msg=user_msg, bot_reply=final_reply.strip())
+        
+        return {"reply": final_reply.strip()}
 
     except Exception as e:
         print(f"Gemini API Error: {e}")
