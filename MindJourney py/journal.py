@@ -1,154 +1,88 @@
-import sqlite3
-import datetime
-import os
+from datetime import datetime
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
+from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
-DB_FILE = 'journal.db'
+router = APIRouter(prefix="/api", tags=["App Backend"])
 
-def init_db():
-    """Initialize the SQLite database and create the table if it doesn't exist."""
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS entries (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp TEXT NOT NULL,
-                content TEXT NOT NULL
-            )
-        ''')
-        conn.commit()
+# 1. Database Connection (XAMPP MySQL)
+DATABASE_URL = "mysql+mysqlconnector://root:@localhost/MindJourney"
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
-def clear_screen():
-    """Clears the terminal screen for better readability."""
-    os.system('cls' if os.name == 'nt' else 'clear')
+# 2. Database Model
+class DBJournalEntry(Base):
+    __tablename__ = "journal_entries"
 
-def write_entry():
-    """Prompt the user to write a new journal entry and save it to the database."""
-    print("\n--- Write New Entry ---")
-    print("Type your entry below. (Press Enter to finish)")
-    content = input("> ")
-    
-    if not content.strip():
-        print("Entry cannot be empty. Discarded.")
-        return
+    id = Column("journal_id", Integer, primary_key=True, index=True)
+    user_id = Column("user_id", Integer, index=True)
+    title = Column(String(255), index=True)
+    content = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO entries (timestamp, content) VALUES (?, ?)", (timestamp, content))
-        conn.commit()
-    print("✅ Journal entry saved successfully!")
+# 3. Pydantic Schemas (user_id changed from str to int)
+class JournalCreate(BaseModel):
+    user_id: int
+    title: str
+    content: str
 
-def view_entries():
-    """Display all previous journal entries."""
-    print("\n--- Your Journal Entries ---")
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, timestamp, content FROM entries ORDER BY timestamp DESC")
-        entries = cursor.fetchall()
+class JournalResponse(BaseModel):
+    id: int
+    user_id: int
+    title: str
+    content: str
+    created_at: datetime
 
-    if not entries:
-        print("Your journal is empty. Start writing!")
-        return False
+    model_config = ConfigDict(from_attributes=True)
 
-    for entry in entries:
-        entry_id, timestamp, content = entry
-        # Show a preview (first 50 characters) if it's a long entry
-        preview = content[:50] + "..." if len(content) > 50 else content
-        print(f"[{entry_id}] {timestamp} | {preview}")
-    
-    return True
+class InsightResponse(BaseModel):
+    title: str
+    message: str
+    button_title: str
+    action_type: str
 
-def read_full_entry():
-    """Allow the user to read a full entry by ID."""
-    if not view_entries():
-        return
-
+# 4. Database Dependency
+def get_db():
+    db = SessionLocal()
     try:
-        entry_id = int(input("\nEnter the ID of the entry you want to read (or 0 to cancel): "))
-        if entry_id == 0:
-            return
-            
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT timestamp, content FROM entries WHERE id = ?", (entry_id,))
-            entry = cursor.fetchone()
+        yield db
+    finally:
+        db.close()
 
-            if entry:
-                print(f"\n--- Entry from {entry[0]} ---")
-                print(entry[1])
-                print("-" * 30)
-            else:
-                print("❌ Entry not found.")
-    except ValueError:
-        print("❌ Invalid input. Please enter a valid number.")
+# 5. Insight Endpoint (Fixes 404 error from HomeView)
+@router.get("/home/insight/{user_id}", response_model=InsightResponse)
+def get_user_insight(user_id: int):
+    return {
+        "title": "✨ Pattern Detected",
+        "message": "Based on your recent entries, you have been tracking your thoughts consistently!",
+        "button_title": "Try a Meditation",
+        "action_type": "meditation"
+    }
 
-def edit_entry():
-    """Allow the user to edit an existing entry."""
-    if not view_entries():
-        return
-
+# 6. Journal Endpoints
+@router.post("/journal", response_model=JournalResponse)
+def create_journal(entry: JournalCreate, db: Session = Depends(get_db)):
     try:
-        entry_id = int(input("\nEnter the ID of the entry you want to edit (or 0 to cancel): "))
-        if entry_id == 0:
-            return
+        new_entry = DBJournalEntry(
+            user_id=entry.user_id,
+            title=entry.title,
+            content=entry.content
+        )
+        db.add(new_entry)
+        db.commit()
+        db.refresh(new_entry)
+        return new_entry
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT content FROM entries WHERE id = ?", (entry_id,))
-            entry = cursor.fetchone()
+@router.get("/journal", response_model=List[JournalResponse])
+def get_all_journals(db: Session = Depends(get_db)):
+    return db.query(DBJournalEntry).order_by(DBJournalEntry.created_at.desc()).all()
 
-            if entry:
-                print(f"\n[Current Content]: {entry[0]}")
-                print("\nType your new content below:")
-                new_content = input("> ")
-
-                if new_content.strip():
-                    cursor.execute("UPDATE entries SET content = ? WHERE id = ?", (new_content, entry_id))
-                    conn.commit()
-                    print("✅ Entry updated successfully!")
-                else:
-                    print("Entry cannot be empty. Update canceled.")
-            else:
-                print("❌ Entry not found.")
-    except ValueError:
-        print("❌ Invalid input. Please enter a valid number.")
-
-def main():
-    """Main application loop."""
-    init_db()
-    
-    while True:
-        print("\n" + "="*30)
-        print("      MY PERSONAL JOURNAL      ")
-        print("="*30)
-        print("1. 📝 Write a new journal entry")
-        print("2. 📖 View all previous entries")
-        print("3. 🔍 Read full entry")
-        print("4. ✏️  Edit an entry")
-        print("5. 🚪 Exit")
-        print("="*30)
-        
-        choice = input("Select an option (1-5): ")
-
-        if choice == '1':
-            clear_screen()
-            write_entry()
-        elif choice == '2':
-            clear_screen()
-            view_entries()
-        elif choice == '3':
-            clear_screen()
-            read_full_entry()
-        elif choice == '4':
-            clear_screen()
-            edit_entry()
-        elif choice == '5':
-            print("Goodbye! Keep journaling! 👋")
-            break
-        else:
-            print("❌ Invalid choice. Please select a number between 1 and 5.")
-
-if __name__ == "__main__":
-    clear_screen()
-    main()
+@router.get("/journal/{user_id}", response_model=List[JournalResponse])
+def get_user_journals(user_id: int, db: Session = Depends(get_db)):
+    return db.query(DBJournalEntry).filter(DBJournalEntry.user_id == user_id).order_by(DBJournalEntry.created_at.desc()).all()

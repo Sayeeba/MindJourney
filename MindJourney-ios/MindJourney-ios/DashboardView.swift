@@ -19,8 +19,7 @@ struct MoodGraphPoint: Decodable, Identifiable {
 struct DashboardView: View {
     @State private var dashboardData: DashboardResponseModel? = nil
     @State private var isLoading = true
-    @State private var userId = "user_123"
-
+    @AppStorage("userId") var userId: Int = 0
     var body: some View {
         NavigationStack {
             ZStack {

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct HomeView: View {
     // MARK: - State Variables
-    @State private var userId: String = "user_123" // Replace with logged-in user ID
+    @AppStorage("userId") var userId: Int = 0
     @State private var selectedMood: Int = 0
     
     // Animation States

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct JournalEntryModel: Identifiable, Codable {
     var id: Int?
-    var user_id: String?
+    var user_id: Int?
     var title: String
     var content: String
     var created_at: String?
@@ -13,7 +13,7 @@ struct JournalView: View {
     @State private var showingNewEntrySheet = false
     @State private var selectedEntryToEdit: JournalEntryModel? = nil
     @State private var isLoading = false
-    @State private var userId = "user_123"
+    @AppStorage("userId") private var userId: Int = 0
 
     var body: some View {
         NavigationStack {
@@ -127,7 +127,7 @@ struct JournalView: View {
     private func fetchJournalEntries() async {
         isLoading = true
         defer { isLoading = false }
-        guard let url = URL(string: "http://127.0.0.1:5001/api/journals") else { return }
+        guard let url = URL(string: "http://127.0.0.1:8000/api/journal") else { return }
 
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
@@ -144,7 +144,7 @@ struct JournalView: View {
 
 struct JournalEditorSheet: View {
     @Environment(\.dismiss) var dismiss
-    var userId: String
+    var userId: Int
     var existingEntry: JournalEntryModel? = nil
     var onSave: () -> Void
 
@@ -204,7 +204,7 @@ struct JournalEditorSheet: View {
     }
 
     private func saveEntry() {
-        guard let url = URL(string: "http://127.0.0.1:5001/api/journal") else { return }
+        guard let url = URL(string: "http://127.0.0.1:8000/api/journal") else { return }
         isSaving = true
 
         var request = URLRequest(url: url)

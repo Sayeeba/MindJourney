@@ -13,6 +13,7 @@ import pymysql
 # 1. Your external routers
 import register 
 import chatbot
+import journal
 import dashboard
 from login import router as login_router
 
@@ -22,6 +23,7 @@ app = FastAPI(title="Mind Journey API")
 # 3. Include ALL Routers
 app.include_router(register.router)
 app.include_router(chatbot.router)
+app.include_router(journal.router)
 app.include_router(dashboard.router)
 app.include_router(login_router)
 
@@ -31,7 +33,7 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# 5. SQLAlchemy Model
+""" 5. SQLAlchemy Model
 class JournalEntry(Base):
     __tablename__ = "journal_entries"
     
@@ -69,7 +71,7 @@ def get_journals(db: Session = Depends(get_db)):
         entries = db.query(JournalEntry).all()
         return entries
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) """
 
 # 9. Run Server (Host 0.0.0.0 for Wi-Fi, Port 8000 to match Swift!)
 if __name__ == '__main__':
