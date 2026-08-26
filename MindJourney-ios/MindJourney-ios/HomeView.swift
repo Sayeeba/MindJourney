@@ -22,7 +22,7 @@ struct HomeView: View {
     @State private var activeSheet: ActiveSheet? = nil
 
     enum ActiveSheet: Identifiable {
-            case profile, dashboard, journal, chatBot, groupTrip, community, psychiatrist, helpline, safeHaven, meditation
+            case profile, dashboard, journal, chatBot, groupTrip, community, helpline, safeHaven, meditation
             var id: Int { hashValue }
         }
 
@@ -111,7 +111,6 @@ struct HomeView: View {
                             featureCard(icon: "📈", title: "Dashboard", subtitle: "See your data", target: .journal)
                             featureCard(icon: "🏕️", title: "Group Trip", subtitle: "Connect in nature", target: .groupTrip)
                             featureCard(icon: "🤝", title: "Community", subtitle: "Share & support", target: .community)
-                            featureCard(icon: "🩺", title: "Psychiatrist", subtitle: "Find help near you", target: .psychiatrist)
                             featureCard(icon: "📞", title: "Helpline", subtitle: "24/7 support", target: .helpline)
                             featureCard(icon: "🏨", title: "Safe Haven", subtitle: "Find a quiet hotel/resort", target: .safeHaven)
                         }
@@ -122,7 +121,8 @@ struct HomeView: View {
                 }
             }
         }
-        .sheet(item: $activeSheet) { sheet in
+        .navigationBarBackButtonHidden(true)
+        .fullScreenCover(item: $activeSheet) { sheet in
             destinationView(for: sheet)
         }
         .task {
@@ -208,7 +208,7 @@ struct HomeView: View {
             VStack {
                 switch sheet {
                 case .profile:
-                    Text("User Profile").font(.title2)
+                    ProfileView()
                 case .journal:
                     JournalView()
                 case .chatBot:
@@ -219,8 +219,6 @@ struct HomeView: View {
                     Text("Guided Meditation Session").font(.title2)
                 case .community:
                     Text("Community").font(.title2)
-                case .psychiatrist:
-                    Text("Psychiatrist").font(.title2)
                 case .helpline:
                     Text("Helpline").font(.title2)
                 case .safeHaven:

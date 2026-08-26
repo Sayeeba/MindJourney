@@ -16,6 +16,7 @@ import chatbot
 import journal
 import dashboard
 from login import router as login_router
+import user_profile
 
 # 2. Single FastAPI Instance (Declare this ONLY ONCE)
 app = FastAPI(title="Mind Journey API")
@@ -26,6 +27,7 @@ app.include_router(chatbot.router)
 app.include_router(journal.router)
 app.include_router(dashboard.router)
 app.include_router(login_router)
+app.include_router(user_profile.router)
 
 # 4. Database Configuration
 DATABASE_URL = "mysql+mysqlconnector://root:@localhost/MindJourney"
