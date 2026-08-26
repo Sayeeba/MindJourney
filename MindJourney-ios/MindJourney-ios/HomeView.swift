@@ -222,7 +222,7 @@ struct HomeView: View {
                 case .helpline:
                     Text("Helpline").font(.title2)
                 case .safeHaven:
-                    Text("Hotels").font(.title2)
+                    SafeHavenView()
                 case .meditation:
                     Text("Guided Meditation Session").font(.title2)
                 
